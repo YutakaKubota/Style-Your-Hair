@@ -172,6 +172,7 @@ class Alignment(nn.Module):
         new_target = torch.where(seg_target2 == 10, 10 * torch.ones_like(seg_target1), seg_target1) # put target hair on the target seg 1 (Here, seg_target1 has no hair region)
         if self.opts.save_all:
             save_vis_mask(img_path1, img_path2, new_target.cpu(), self.opts.save_dir, count='0_initial_target_seg')
+            save_vis_mask(img_path1, img_path2, hair_mask2.cpu(), self.opts.save_dir, count='hair_mask2') #nilone
 
         if self.opts.mean_seg:
             if self.opts.warped_seg: # mean_seg is the warped target img's seg

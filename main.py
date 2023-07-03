@@ -42,7 +42,7 @@ def get_im_paths_not_embedded(im_paths: Set[str]) -> List[str]:
 
 
 def main(args):
-
+    # python main.py - -input_dir. / ffhq_image / --im_path1 target.png - -im_path2 source.png - -output_dir. / style_your_hair_output / --warp_loss_with_prev_list delta_w style_hair_slic_large - -save_all - -version final - -flip_check
     set_seed(42)
 
     ii2s = Embedding(args)
