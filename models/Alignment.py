@@ -172,7 +172,7 @@ class Alignment(nn.Module):
         new_target = torch.where(seg_target2 == 10, 10 * torch.ones_like(seg_target1), seg_target1) # put target hair on the target seg 1 (Here, seg_target1 has no hair region)
         if self.opts.save_all:
             save_vis_mask(img_path1, img_path2, new_target.cpu(), self.opts.save_dir, count='0_initial_target_seg')
-            save_vis_mask(img_path1, img_path2, hair_mask2.cpu(), self.opts.save_dir, count='hair_mask2') #nilone
+            save_vis_mask(img_path1, img_path2, hair_mask2.squeeze().cpu(), self.opts.save_dir, count='hair_mask2') #nilone
 
         if self.opts.mean_seg:
             if self.opts.warped_seg: # mean_seg is the warped target img's seg
@@ -413,17 +413,6 @@ class Alignment(nn.Module):
                     loss += hairstyle_loss
                 loss.backward()
                 optimizer_align_with_blend.step()
-                #print(loss_dict)
-                # for debugging
-                # if step % 100 == 0 :
-                #     #print(loss_dict)
-                #     save_im = toPIL(
-                #         I_G_0_1.squeeze().cpu())  # save_im = toPIL(((I_G_0_1 + 1) / 2).clamp(0, 1).squeeze().cpu())
-                #     toPIL((no_hair_region * I_1_0_1).squeeze().cpu()).save(
-                #         cur_check_dir + f'{im_name_1}_with_{im_name_2}_nohairreigion_{step}.png')
-                #     toPIL((target_hairmask_down_256 * warped_gen_im_256_0_1).squeeze().cpu()).save(
-                #         cur_check_dir + f'{im_name_1}_with_{im_name_2}_hairreigion_{step}.png')
-                #     save_im.save(cur_check_dir + f'{im_name_1}_with_{im_name_2}_hair_{step}.png')
 
             latent_in = latent_mixed
             if self.opts.save_all:
@@ -438,58 +427,6 @@ class Alignment(nn.Module):
         else:
             pass
 
-        #print('down_seg shape : ',down_seg.shape)
-
-        # intermediate_align, _ = self.net.generator([latent_in], input_is_latent=True, return_latents=False,start_layer=0, end_layer=3)
-        # intermediate_align = intermediate_align.clone().detach()
-        #
-        # #############################################
-        #
-        # latent_F_out_new, _ = self.net.generator([latent_in], input_is_latent=True, return_latents=False,
-        #                                          start_layer=0, end_layer=3) # Target Mask shape 을 만들면서, Target hair style 을 따르도록 배운 W 부터 만들어진 F (512, 32, 32)
-        # latent_F_out_new = latent_F_out_new.clone().detach()
-        #
-        # free_mask = 1 - (1 - hair_mask1.unsqueeze(0)) * (1 - hair_mask_target)
-        #
-        # ##############################
-        # free_mask, _ = self.dilate_erosion(free_mask, device, dilate_erosion=smooth)
-        # ##############################
-        #
-        # free_mask_down_32 = F.interpolate(free_mask.float(), size=(32, 32), mode='bicubic')[0]
-        # interpolation_low = 1 - free_mask_down_32
-        #
-        #
-        # latent_F_mixed = intermediate_align + interpolation_low.unsqueeze(0) * (
-        #         latent_F_1 - intermediate_align) # 1
-        #
-        # ## trg_mask * trg_img visualization code
-        # if self.opts.size == 256: # size 256, 256
-        #     img = Image.fromarray((np.array(Image.open(img_path2).convert('RGB')) * np.array(hair_mask2.cpu().squeeze().unsqueeze(-1))).astype(np.uint8))
-        # else:
-        #     img = Image.fromarray((np.array(Image.open(img_path2).convert('RGB').resize((512,512))) * np.array(hair_mask2.cpu().squeeze().unsqueeze(-1))).astype(np.uint8))
-        # #img.save(os.path.join(self.opts.output_dir,'Vis_Mask',f'{im_name_1}_{im_name_2}_trg_mask^trg_img.png'))
-        # if not align_more_region:
-        #     free_mask = hair_mask_target * hair_mask2.unsqueeze(0)
-        #     ##########################
-        #     _, free_mask = self.dilate_erosion(free_mask, device, dilate_erosion=self.opts.smooth)
-        #     ##########################
-        #     free_mask_down_32 = F.interpolate(free_mask.float(), size=(32, 32), mode='bicubic')[0]
-        #     interpolation_low = 1 - free_mask_down_32
-        #
-        # latent_F_mixed = latent_F_out_new + interpolation_low.unsqueeze(0) * (latent_F_mixed - latent_F_out_new) # 2
-        #
-        # free_mask = F.interpolate((hair_mask2.unsqueeze(0) * hair_mask_target).float(), size=(256, 256), mode='nearest').to(self.opts.device
-        # ##########################
-        # _, free_mask = self.dilate_erosion(free_mask, device, dilate_erosion=self.opts.smooth)
-        # ##########################
-        # free_mask_down_32 = F.interpolate(free_mask.float(), size=(32, 32), mode='bicubic')[0]
-        # interpolation_low = 1 - free_mask_down_32
-        #
-        # latent_F_mixed = latent_F_2 + interpolation_low.unsqueeze(0) * (latent_F_mixed - latent_F_2) # 3
-        #
-        # with torch.no_grad():
-        #     gen_im, _ = self.net.generator([latent_mixed], input_is_latent=True, return_latents=False, start_layer=4,end_layer=8, layer_in=latent_F_mixed)
-        #self.save_align_results(im_name_1, im_name_2, sign, gen_im, latent_mixed, latent_F_mixed,save_intermediate=save_intermediate, save_name='latent_mixed')
 
     def optimize_src_latent_with_aligned_mask(self, latent_W_path_1, target_mask, latent_1, is_downsampled):
 
@@ -782,23 +719,6 @@ class Alignment(nn.Module):
 
             loss.backward()
             optimizer_warp.step()
-            # if step % 10 == 0 : ### warped result save step size
-            #     cur_check_dir = f'{self.opts.output_dir}check_hair/'
-            #     os.makedirs(cur_check_dir, exist_ok=True)
-            #     print(f'{step}: ', loss_dict)
-            #     save_im = toPIL(gen_im.squeeze().cpu())
-            #     aaa = torch.zeros((3, 256, 256))
-            #     kp_prob =  F.interpolate(torch.max(gen_kp_hm, dim=1)[0].unsqueeze(0).cpu(), size=(256, 256))
-            #     aaa[0] = kp_prob[0][0]
-            #     kp_im = toPIL(torch.cat((gen_im.squeeze().cpu(), aaa), dim=-1))
-            #
-            #     save_im.save(cur_check_dir + f'{im_name_2}_with_{im_name_1}_pose_{step}.png')
-            #     # added for debug
-            #     if 'style_hair_slic_large' in self.opts.warp_loss_with_prev_list:
-            #         save_image(torch.cat([sp_gen_im * sp_gen_mask_large256, sp_ref_im * sp_ref_mask_large256]),
-            #                    cur_check_dir + f'{im_name_2}_with_{im_name_1}_sp_gen_ref_{step}.png', normalize=True,
-            #                    nrow=sp_gen_im.shape[0])
-
             prev_im = gen_im.clone().detach()
             prev_seg = torch.argmax(down_seg.clone().detach(), dim=1).long()
 
